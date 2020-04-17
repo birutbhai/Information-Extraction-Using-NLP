@@ -2,6 +2,33 @@ import os
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import wordnet as wn
+#Reference: https://stackoverflow.com/questions/25534214/nltk-wordnet-lemmatizer-shouldnt-it-lemmatize-all-inflections-of-a-word
+def is_noun(tag):
+    return tag in ['NN', 'NNS', 'NNP', 'NNPS']
+
+
+def is_verb(tag):
+    return tag in ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']
+
+
+def is_adverb(tag):
+    return tag in ['RB', 'RBR', 'RBS']
+
+
+def is_adjective(tag):
+    return tag in ['JJ', 'JJR', 'JJS']
+
+
+def penn_to_wn(tag):
+    if is_adjective(tag):
+        return wn.ADJ
+    elif is_noun(tag):
+        return wn.NOUN
+    elif is_adverb(tag):
+        return wn.ADV
+    elif is_verb(tag):
+        return wn.VERB
+    return None
 
 lemmatizer = WordNetLemmatizer()
 DIR = "WikipediaArticles"
@@ -25,7 +52,10 @@ if __name__ == "__main__":
                 lemma_list = list()
                 for token in tokens:
                     #print(token[0])
-                    token_str = token[0]+":Lemmatized:"+lemmatizer.lemmatize(token[0])+":POS:"+token[1]
+                    if penn_to_wn(token[1]) == None:
+                        token_str = token[0]+":Lemmatized:"+lemmatizer.lemmatize(token[0])+":POS:"+token[1]
+                    else:
+                        token_str = token[0]+":Lemmatized:"+lemmatizer.lemmatize(token[0],penn_to_wn(token[1]))+":POS:"+token[1]
                     synsets = wn.synsets(token[0])
                     for synset in synsets:
                         #print(str(synset)[8:-2])
