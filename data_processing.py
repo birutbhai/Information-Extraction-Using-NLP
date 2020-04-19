@@ -68,6 +68,10 @@ if __name__ == "__main__":
             except Exception as e:
                 print(e)
         file_dict.update({file:token_list})
-    print(file_dict)
 
-
+o_file = open("data_processing_output.txt", "w")
+for key, value in file_dict.items():
+    if key is not "":
+        o_file.write(str(key+": " + str(value)))
+        o_file.write("\n")
+o_file.close()
