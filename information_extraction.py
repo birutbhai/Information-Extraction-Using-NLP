@@ -51,7 +51,7 @@ if __name__ == "__main__":
                     for line in f.readlines():
                         contents += line
                 except Exception as e1:
-                    print(e1)
+                    print("Excaption", e1)
             file_dict.update({file:contents})
     for file, text in file_dict.items():
         try:
@@ -73,53 +73,62 @@ if __name__ == "__main__":
                         else:
                             ref_text = ref_text + " " + str(token)
                 except Exception as e1:
-                    print(e1)
+                    print("Excaption", e1)
             coref_dict.update({file:ref_text})
         except Exception as e:
-            print(e)
+            print("Excaption", e)
     #print(coref_dict)
 
     nlp = spacy.load('en_core_web_sm')
     from spacy.matcher import Matcher
     from spacy.tokens import Span
+    import json
     #Place formats
     pattern1 = [{'POS':'PROPN'},
                 {"OP": "*"},
                 {'LOWER': 'in'},
-                {"OP": "*"},
                 {'POS': 'PROPN'}]
     pattern2 = [{'POS':'PROPN'},
                 {"OP": "*"},
                 {'LOWER': 'part'},
                 {'LOWER': 'of'},
-                {"OP": "*"},
                 {'POS': 'PROPN'}]
     pattern3 = [{'POS':'PROPN'},
-                {"OP": "*"},
                 {'LOWER': ','},
                 {'POS': 'PROPN'}]
     pattern4 = [{'POS':'PROPN'},
-                {"OP": "*"},
+                {'POS':'NOUN'},
                 {'LOWER': 'of'},
-                {"OP": "*"},
                 {'POS': 'PROPN'}]
+    pattern5 = [{'POS':'PROPN'},
+                {"OP": "*"},
+                {'LOWER': 'in'},
+                {'POS': 'PROPN'},
+                {'LOWER': 'and'},
+                {'POS': 'PROPN'}]
+
     matcher = Matcher(nlp.vocab)
     matcher.add(1, None, pattern1)
     matcher.add(2, None, pattern2)
     matcher.add(3, None, pattern3)
     matcher.add(4, None, pattern4)
-    for file, text in coref_dict.items():
+    matcher.add(5, None, pattern5)
+    json_list = list()
+    for file, text in file_dict.items():
         try:
+            file_extraction_list = list()
             sentences = nltk.sent_tokenize(text)
             for sentence in sentences:
                 try:
                     doc = nlp(sentence)
                     print("Sentence: "+sentence)
+                    #for token in doc:
+                        #print(token.text,token.pos_)
                     place_count = 0
                     for X in doc.ents:
-                        if str(X.label_) == "GPE":
+                        if str(X.label_) == "GPE" or str(X.label_) == "NORP'":
                             place_count = place_count + 1
-                    if place_count >=  2:
+                    if place_count >=  1:
                         matches = matcher(doc)
                         for match in matches:
                             match_patter_id = match[0]
@@ -129,20 +138,29 @@ if __name__ == "__main__":
                             places = [tokens[0],tokens[len(tokens)-1]]
                             match_count = 0
                             for X in doc.ents:
-                                if X.text == places[0] and X.label_ == "GPE":
+                                if X.text == places[0] and X.label_ == "GPE" or str(X.label_) == "NORP":
                                     match_count = match_count + 1
-                                if X.text == places[1] and X.label_ == "GPE":
+                                if X.text == places[1] and X.label_ == "GPE" or str(X.label_) == "NORP":
                                     match_count = match_count + 1
                             if match_count >=  1:
+                                first_place = places[0]
+                                second_place = places[1]
                                 if match_patter_id == 4:
-                                    print("Location:"+places[1]+"-->"+places[0])
-                                else:
-                                    print("Location:"+places[0]+"-->"+places[1])
+                                    first_place = places[1]
+                                    second_place = places[0]
+                                print("Location:"+first_place+"-->"+second_place)
+                                file_extraction_list.insert(len(file_extraction_list), {"template": "PART", "sentences": sentence, "arguments": {"1": first_place, "2":second_place}})
+                                #print("extraction: ", file_extraction_list)
                         print([(X.text, X.label_) for X in doc.ents])
                 except Exception as e1:
-                    print(e1)
-
+                    print("Exception:", e1)
+            json_list.insert(len(json_list), {"document": file, "extraction":file_extraction_list})
         except Exception as e:
-            print(e)
+            print("Exception:", e)
 
+    json_file =json.dumps(json_list)
+    o_file = open("output.json", "w")
+    o_file.write(json_file)
+    o_file.close()
 
+    
